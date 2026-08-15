@@ -8,8 +8,10 @@ use Illuminate\Support\ServiceProvider;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
 use LBHurtado\XProvisioning\Services\ConfiguredProvisioningEvidenceVerifier;
 use LBHurtado\XProvisioning\Services\NullProvisioningActivator;
+use LBHurtado\XProvisioning\Services\NullProvisioningRevoker;
 use LBHurtado\XProvisioning\Services\PermissiveProvisioningActorGuard;
 
 final class XProvisioningServiceProvider extends ServiceProvider
@@ -20,6 +22,7 @@ final class XProvisioningServiceProvider extends ServiceProvider
         $this->app->singleton(ProvisioningActorGuardContract::class, PermissiveProvisioningActorGuard::class);
         $this->app->singleton(ProvisioningEvidenceVerifierContract::class, ConfiguredProvisioningEvidenceVerifier::class);
         $this->app->singleton(ProvisioningActivatorContract::class, NullProvisioningActivator::class);
+        $this->app->singleton(ProvisioningRevokerContract::class, NullProvisioningRevoker::class);
     }
 
     public function boot(): void

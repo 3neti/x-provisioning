@@ -16,6 +16,7 @@ final class ProvisioningOffer extends Model
     protected $fillable = [
         'request_id', 'revision_id', 'reference', 'claim_token_hash', 'status',
         'expires_at', 'accepted_at', 'activated_at', 'activation_reference',
+        'revoked_at', 'revocation_reference',
     ];
 
     protected $hidden = ['claim_token_hash'];
@@ -29,6 +30,7 @@ final class ProvisioningOffer extends Model
             'expires_at' => 'immutable_datetime',
             'accepted_at' => 'immutable_datetime',
             'activated_at' => 'immutable_datetime',
+            'revoked_at' => 'immutable_datetime',
         ];
     }
 

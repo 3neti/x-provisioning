@@ -36,6 +36,11 @@ final class ProvisioningRequest extends Model
         ];
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'reference';
+    }
+
     public function revisions(): HasMany
     {
         return $this->hasMany(ProvisioningRevision::class, 'request_id');
