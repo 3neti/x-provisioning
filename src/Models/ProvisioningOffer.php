@@ -19,6 +19,7 @@ final class ProvisioningOffer extends Model
         'expires_at', 'accepted_at', 'activated_at', 'activation_reference',
         'activated_by_type', 'activated_by_id',
         'revoked_at', 'revocation_reference',
+        'superseded_by_offer_id', 'supersession_reference', 'superseded_at',
     ];
 
     protected $hidden = ['claim_token_hash'];
@@ -33,6 +34,7 @@ final class ProvisioningOffer extends Model
             'accepted_at' => 'immutable_datetime',
             'activated_at' => 'immutable_datetime',
             'revoked_at' => 'immutable_datetime',
+            'superseded_at' => 'immutable_datetime',
         ];
     }
 
@@ -59,5 +61,10 @@ final class ProvisioningOffer extends Model
     public function activatedBy(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function supersededBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'superseded_by_offer_id');
     }
 }

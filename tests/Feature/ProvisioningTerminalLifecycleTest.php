@@ -12,6 +12,7 @@ use LBHurtado\XProvisioning\Actions\IssueProvisioningOffer;
 use LBHurtado\XProvisioning\Actions\RejectProvisioningRequest;
 use LBHurtado\XProvisioning\Actions\RevokeProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\SubmitProvisioningRequest;
+use LBHurtado\XProvisioning\Actions\SupersedeProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\WithdrawProvisioningRequest;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
@@ -154,4 +155,83 @@ it('revokes activated authority through the configured revoker exactly once', fu
         ->and($calls->activations)->toBe(1)
         ->and($calls->revocations)->toBe(1)
         ->and(ProvisioningEvent::query()->where('event_type', 'provisioning.acceptance.revoked')->count())->toBe(1);
+});
+
+it('activates a replacement before superseding its predecessor exactly once', function (): void {
+    $maker = User::query()->create(['name' => 'Maker']);
+    $checker = User::query()->create(['name' => 'Checker']);
+    $recipient = User::query()->create(['name' => 'Recipient']);
+    $calls = new class
+    {
+        public int $revocations = 0;
+    };
+    app()->bind(ProvisioningActivatorContract::class, fn (): ProvisioningActivatorContract => new class implements ProvisioningActivatorContract
+    {
+        public function activate(
+            ProvisioningRevision $revision,
+            ProvisioningAcceptance $acceptance,
+            ?Model $checker = null,
+        ): string {
+            return 'activation:'.$revision->snapshot_hash;
+        }
+    });
+    app()->bind(ProvisioningRevokerContract::class, fn (): ProvisioningRevokerContract => new class($calls) implements ProvisioningRevokerContract
+    {
+        public function __construct(private object $calls) {}
+
+        public function revoke(ProvisioningRevision $revision, ProvisioningAcceptance $acceptance, string $reason): string
+        {
+            $this->calls->revocations++;
+
+            return 'revocation:'.$revision->snapshot_hash;
+        }
+    });
+
+    $activate = function (string $purpose) use ($maker, $checker, $recipient) {
+        $request = app(CreateProvisioningRequest::class)->handle(
+            ProvisioningProfile::CommercialMaker,
+            ['purpose' => $purpose],
+            $maker,
+            activationMode: ProvisioningActivationMode::ReviewRequired,
+        );
+        app(SubmitProvisioningRequest::class)->handle($request, $maker);
+        app(ApproveProvisioningRequest::class)->handle($request, $checker);
+        $credential = app(IssueProvisioningOffer::class)->handle($request);
+        $pending = app(AcceptProvisioningOffer::class)->handle(
+            $credential->claimToken,
+            $recipient->getMorphClass(),
+            (string) $recipient->getKey(),
+            [
+                'name' => 'Recipient',
+                'email' => 'recipient@example.test',
+                'mobile' => '639171234567',
+                'otp' => 'verified',
+                'responsibility_attestation' => 'accepted',
+            ],
+        );
+
+        return app(ActivateProvisioningAcceptance::class)->handle($pending, $checker);
+    };
+
+    $predecessor = $activate('Original authority');
+    $replacement = $activate('Replacement authority');
+    $superseded = app(SupersedeProvisioningAcceptance::class)->handle(
+        $predecessor,
+        $replacement,
+        $checker,
+        'Replace the original authority without an operational gap.',
+    );
+    $replayed = app(SupersedeProvisioningAcceptance::class)->handle(
+        $superseded,
+        $replacement,
+        $checker,
+        'Replace the original authority without an operational gap.',
+    );
+
+    expect($superseded->status)->toBe(ProvisioningRequestStatus::Superseded)
+        ->and($superseded->superseded_by_offer_id)->toBe($replacement->getKey())
+        ->and($replacement->refresh()->status)->toBe(ProvisioningRequestStatus::Activated)
+        ->and($replayed->status)->toBe(ProvisioningRequestStatus::Superseded)
+        ->and($calls->revocations)->toBe(1)
+        ->and(ProvisioningEvent::query()->where('event_type', 'provisioning.acceptance.superseded')->count())->toBe(1);
 });
