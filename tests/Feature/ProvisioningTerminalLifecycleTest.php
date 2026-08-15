@@ -136,6 +136,11 @@ it('revokes activated authority through the configured revoker exactly once', fu
         ],
     );
     $activated = app(ActivateProvisioningAcceptance::class)->handle($pending, $approver);
+    expect(fn () => app(RevokeProvisioningAcceptance::class)->handle(
+        $activated,
+        $maker,
+        'Maker cannot revoke the authority.',
+    ))->toThrow(DomainException::class, 'independent');
     $revoked = app(RevokeProvisioningAcceptance::class)->handle($activated, $revoker, 'Authority is no longer required.');
     $replayed = app(RevokeProvisioningAcceptance::class)->handle($revoked, $revoker, 'Authority is no longer required.');
 

@@ -41,9 +41,11 @@ final readonly class RevokeProvisioningAcceptance
                 throw new DomainException('Only activated provisioning authority may be revoked.');
             }
 
-            if ($locked->revision->checker_type === $checker->getMorphClass()
-                && (string) $locked->revision->checker_id === (string) $checker->getKey()) {
-                throw new DomainException('Revocation requires a checker independent from the original approval.');
+            if (($locked->revision->maker_type === $checker->getMorphClass()
+                && (string) $locked->revision->maker_id === (string) $checker->getKey())
+                || ($locked->acceptance->candidate_type === $checker->getMorphClass()
+                    && (string) $locked->acceptance->candidate_reference === (string) $checker->getKey())) {
+                throw new DomainException('Revocation requires a checker independent from the maker and recipient.');
             }
 
             $reference = trim($this->revoker->revoke($locked->revision, $locked->acceptance, $reason));
