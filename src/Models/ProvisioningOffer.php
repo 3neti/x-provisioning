@@ -36,6 +36,11 @@ final class ProvisioningOffer extends Model
         ];
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'reference';
+    }
+
     public function request(): BelongsTo
     {
         return $this->belongsTo(ProvisioningRequest::class, 'request_id');

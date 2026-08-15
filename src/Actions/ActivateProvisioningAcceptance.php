@@ -52,7 +52,7 @@ final readonly class ActivateProvisioningAcceptance
                 throw new DomainException('Activation requires a checker independent from the maker and recipient.');
             }
 
-            $activationReference = $this->activator->activate($locked->revision, $locked->acceptance);
+            $activationReference = $this->activator->activate($locked->revision, $locked->acceptance, $checker);
 
             if (trim($activationReference) === '') {
                 throw new DomainException('Provisioning activation did not return an authoritative reference.');

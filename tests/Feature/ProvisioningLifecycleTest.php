@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XProvisioning\Actions\AcceptProvisioningOffer;
 use LBHurtado\XProvisioning\Actions\ActivateProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\ApproveProvisioningRequest;
@@ -27,6 +28,7 @@ it('requires an independent checker and activates an unknown candidate after ver
         public function activate(
             ProvisioningRevision $revision,
             ProvisioningAcceptance $acceptance,
+            ?Model $checker = null,
         ): string {
             return 'authority:'.$revision->snapshot_hash.':'.$acceptance->candidate_reference;
         }
@@ -112,6 +114,7 @@ it('records an independent activation checker for review-required authority', fu
         public function activate(
             ProvisioningRevision $revision,
             ProvisioningAcceptance $acceptance,
+            ?Model $checker = null,
         ): string {
             return 'authority:'.$revision->snapshot_hash.':'.$acceptance->candidate_reference;
         }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XProvisioning\Actions\AcceptProvisioningOffer;
 use LBHurtado\XProvisioning\Actions\ActivateProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\ApproveProvisioningRequest;
@@ -95,8 +96,11 @@ it('revokes activated authority through the configured revoker exactly once', fu
     {
         public function __construct(private object $calls) {}
 
-        public function activate(ProvisioningRevision $revision, ProvisioningAcceptance $acceptance): string
-        {
+        public function activate(
+            ProvisioningRevision $revision,
+            ProvisioningAcceptance $acceptance,
+            ?Model $checker = null,
+        ): string {
             $this->calls->activations++;
 
             return 'activation:test';
