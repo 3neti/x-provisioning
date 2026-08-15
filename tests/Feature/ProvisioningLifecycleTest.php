@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use LBHurtado\XProvisioning\Actions\AcceptProvisioningOffer;
+use LBHurtado\XProvisioning\Actions\ActivateProvisioningAcceptance;
 use LBHurtado\XProvisioning\Actions\ApproveProvisioningRequest;
 use LBHurtado\XProvisioning\Actions\CreateProvisioningRequest;
 use LBHurtado\XProvisioning\Actions\IssueProvisioningOffer;
 use LBHurtado\XProvisioning\Actions\SubmitProvisioningRequest;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
+use LBHurtado\XProvisioning\Enums\ProvisioningActivationMode;
 use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
 use LBHurtado\XProvisioning\Enums\ProvisioningRequestStatus;
 use LBHurtado\XProvisioning\Models\ProvisioningAcceptance;
@@ -98,4 +100,55 @@ it('fails closed when required claim evidence is absent', function (): void {
 
     expect($credential->offer->refresh()->status)->toBe(ProvisioningRequestStatus::Offered)
         ->and($credential->offer->acceptance()->exists())->toBeFalse();
+});
+
+it('records an independent activation checker for review-required authority', function (): void {
+    $maker = User::query()->create(['name' => 'Maker']);
+    $approvalChecker = User::query()->create(['name' => 'Approval Checker']);
+    $activationChecker = User::query()->create(['name' => 'Activation Checker']);
+    $recipient = User::query()->create(['name' => 'Recipient']);
+    app()->bind(ProvisioningActivatorContract::class, fn (): ProvisioningActivatorContract => new class implements ProvisioningActivatorContract
+    {
+        public function activate(
+            ProvisioningRevision $revision,
+            ProvisioningAcceptance $acceptance,
+        ): string {
+            return 'authority:'.$revision->snapshot_hash.':'.$acceptance->candidate_reference;
+        }
+    });
+    $request = app(CreateProvisioningRequest::class)->handle(
+        ProvisioningProfile::TreasuryMaker,
+        ['role' => 'Treasury Maker'],
+        $maker,
+        activationMode: ProvisioningActivationMode::ReviewRequired,
+    );
+    app(SubmitProvisioningRequest::class)->handle($request, $maker);
+    app(ApproveProvisioningRequest::class)->handle($request, $approvalChecker);
+    $credential = app(IssueProvisioningOffer::class)->handle($request);
+    $accepted = app(AcceptProvisioningOffer::class)->handle(
+        $credential->claimToken,
+        $recipient->getMorphClass(),
+        (string) $recipient->getKey(),
+        [
+            'name' => 'Recipient',
+            'email' => 'recipient@example.test',
+            'mobile' => '639171234567',
+            'otp' => 'verified',
+            'responsibility_attestation' => 'accepted',
+        ],
+    );
+
+    expect($accepted->status)->toBe(ProvisioningRequestStatus::ActivationPending)
+        ->and(fn () => app(ActivateProvisioningAcceptance::class)->handle($accepted))
+        ->toThrow(DomainException::class, 'activation checker')
+        ->and(fn () => app(ActivateProvisioningAcceptance::class)->handle($accepted, $maker))
+        ->toThrow(DomainException::class, 'independent')
+        ->and(fn () => app(ActivateProvisioningAcceptance::class)->handle($accepted, $recipient))
+        ->toThrow(DomainException::class, 'independent');
+
+    $activated = app(ActivateProvisioningAcceptance::class)->handle($accepted, $activationChecker);
+
+    expect($activated->status)->toBe(ProvisioningRequestStatus::Activated)
+        ->and($activated->activated_by_type)->toBe($activationChecker->getMorphClass())
+        ->and((string) $activated->activated_by_id)->toBe((string) $activationChecker->getKey());
 });

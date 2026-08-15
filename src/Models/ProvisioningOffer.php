@@ -7,6 +7,7 @@ namespace LBHurtado\XProvisioning\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LBHurtado\XProvisioning\Enums\ProvisioningRequestStatus;
 
 final class ProvisioningOffer extends Model
@@ -16,6 +17,7 @@ final class ProvisioningOffer extends Model
     protected $fillable = [
         'request_id', 'revision_id', 'reference', 'claim_token_hash', 'status',
         'expires_at', 'accepted_at', 'activated_at', 'activation_reference',
+        'activated_by_type', 'activated_by_id',
         'revoked_at', 'revocation_reference',
     ];
 
@@ -47,5 +49,10 @@ final class ProvisioningOffer extends Model
     public function acceptance(): HasOne
     {
         return $this->hasOne(ProvisioningAcceptance::class, 'offer_id');
+    }
+
+    public function activatedBy(): MorphTo
+    {
+        return $this->morphTo();
     }
 }

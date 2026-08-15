@@ -135,7 +135,7 @@ it('revokes activated authority through the configured revoker exactly once', fu
             'responsibility_attestation' => 'accepted',
         ],
     );
-    $activated = app(ActivateProvisioningAcceptance::class)->handle($pending);
+    $activated = app(ActivateProvisioningAcceptance::class)->handle($pending, $approver);
     $revoked = app(RevokeProvisioningAcceptance::class)->handle($activated, $revoker, 'Authority is no longer required.');
     $replayed = app(RevokeProvisioningAcceptance::class)->handle($revoked, $revoker, 'Authority is no longer required.');
 
