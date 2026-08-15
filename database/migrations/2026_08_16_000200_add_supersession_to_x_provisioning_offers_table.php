@@ -24,6 +24,7 @@ return new class extends Migration
     {
         Schema::table('x_provisioning_offers', function (Blueprint $table): void {
             $table->dropForeign(['superseded_by_offer_id']);
+            $table->dropUnique(['supersession_reference']);
             $table->dropColumn(['superseded_by_offer_id', 'supersession_reference', 'superseded_at']);
         });
     }
