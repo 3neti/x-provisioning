@@ -94,6 +94,7 @@ it('produces an immutable typed authority envelope only after independent activa
         ->and($payload['designation']['tax_profile_reference'])->toBe('tax-profile:3neti:ph:v1')
         ->and($payload['designation']['settlement_disposition'])->toBe('retain_payable')
         ->and($payload['designation']['settlement_account_reference'])->toBeNull()
+        ->and($payload['designation'])->not->toHaveKey('settlement_principal_reference')
         ->and($payload['accepted_snapshot_hash'])->toBe($activated->revision->snapshot_hash)
         ->and($payload['acceptance_evidence_hash'])->toBe($activated->acceptance->evidence_hash)
         ->and($payload['activated_by']['reference'])->toBe((string) $activationChecker->getKey())
@@ -101,7 +102,7 @@ it('produces an immutable typed authority envelope only after independent activa
         ->and($encoded)->not->toContain('must-not-appear');
 });
 
-it('requires an explicit Account for automatic internal settlement', function (): void {
+it('requires explicit Account and principal bindings for automatic internal settlement', function (): void {
     expect(fn () => new CommercialRecipientDesignationData(
         counterpartyReference: 'counterparty:3neti',
         commercialRole: 'service_aggregator',
@@ -111,7 +112,24 @@ it('requires an explicit Account for automatic internal settlement', function ()
         taxProfileReference: null,
         effectiveFrom: '2026-08-16T00:00:00+08:00',
         settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
-    ))->toThrow(DomainException::class, 'requires a settlement Account reference');
+        settlementAccountReference: 'wallet:account-uuid',
+    ))->toThrow(DomainException::class, 'requires Account and principal references');
+
+    $designation = new CommercialRecipientDesignationData(
+        counterpartyReference: 'counterparty:3neti',
+        commercialRole: 'service_aggregator',
+        componentScope: ['inputs.fields.otp'],
+        agreementReference: 'agreement:institution-3neti:v1',
+        settlementDesignationReference: 'settlement-designation:3neti:v1',
+        taxProfileReference: null,
+        effectiveFrom: '2026-08-16T00:00:00+08:00',
+        settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
+        settlementAccountReference: 'wallet:account-uuid',
+        settlementPrincipalReference: 'principal:3neti',
+    );
+
+    expect(CommercialRecipientDesignationData::fromArray($designation->toArray())->toArray())
+        ->toBe($designation->toArray());
 });
 
 it('keeps ordinary provisioning profiles backward compatible', function (): void {
@@ -142,6 +160,7 @@ function designationSnapshot(): array
         'tax_profile_reference' => 'tax-profile:3neti:ph:v1',
         'settlement_disposition' => 'retain_payable',
         'settlement_account_reference' => null,
+        'settlement_principal_reference' => null,
         'effective_from' => '2026-08-16T00:00:00+08:00',
         'effective_until' => null,
     ];

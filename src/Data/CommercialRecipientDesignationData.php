@@ -22,6 +22,7 @@ final readonly class CommercialRecipientDesignationData
         public ?string $effectiveUntil = null,
         public CommercialSettlementDisposition $settlementDisposition = CommercialSettlementDisposition::RetainPayable,
         public ?string $settlementAccountReference = null,
+        public ?string $settlementPrincipalReference = null,
     ) {
         foreach ([
             'counterparty reference' => $this->counterpartyReference,
@@ -57,15 +58,20 @@ final readonly class CommercialRecipientDesignationData
         $settlementAccountReference = $this->settlementAccountReference !== null
             ? trim($this->settlementAccountReference)
             : null;
+        $settlementPrincipalReference = $this->settlementPrincipalReference !== null
+            ? trim($this->settlementPrincipalReference)
+            : null;
 
         if ($this->settlementDisposition === CommercialSettlementDisposition::InternalAccountCredit
-            && ($settlementAccountReference === null || $settlementAccountReference === '')) {
-            throw new DomainException('Commercial Recipient Designation internal Account credit requires a settlement Account reference.');
+            && (($settlementAccountReference === null || $settlementAccountReference === '')
+                || ($settlementPrincipalReference === null || $settlementPrincipalReference === ''))) {
+            throw new DomainException('Commercial Recipient Designation internal Account credit requires Account and principal references.');
         }
 
         if ($this->settlementDisposition === CommercialSettlementDisposition::RetainPayable
-            && $settlementAccountReference !== null && $settlementAccountReference !== '') {
-            throw new DomainException('Commercial Recipient Designation retained payables cannot name a settlement Account.');
+            && (($settlementAccountReference !== null && $settlementAccountReference !== '')
+                || ($settlementPrincipalReference !== null && $settlementPrincipalReference !== ''))) {
+            throw new DomainException('Commercial Recipient Designation retained payables cannot name a settlement Account or principal.');
         }
 
         $effectiveFrom = $this->timestamp($this->effectiveFrom, 'effective-from');
@@ -81,7 +87,7 @@ final readonly class CommercialRecipientDesignationData
         $componentScope = array_map('trim', $this->componentScope);
         sort($componentScope, SORT_STRING);
 
-        return [
+        $payload = [
             'counterparty_reference' => trim($this->counterpartyReference),
             'commercial_role' => trim($this->commercialRole),
             'component_scope' => $componentScope,
@@ -95,6 +101,12 @@ final readonly class CommercialRecipientDesignationData
             'effective_from' => $this->effectiveFrom,
             'effective_until' => $this->effectiveUntil,
         ];
+
+        if ($this->settlementPrincipalReference !== null) {
+            $payload['settlement_principal_reference'] = trim($this->settlementPrincipalReference);
+        }
+
+        return $payload;
     }
 
     /** @param array<string, mixed> $payload */
@@ -114,6 +126,9 @@ final readonly class CommercialRecipientDesignationData
             ),
             settlementAccountReference: isset($payload['settlement_account_reference'])
                 ? (string) $payload['settlement_account_reference']
+                : null,
+            settlementPrincipalReference: isset($payload['settlement_principal_reference'])
+                ? (string) $payload['settlement_principal_reference']
                 : null,
         );
     }
