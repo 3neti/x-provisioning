@@ -13,6 +13,7 @@ use LBHurtado\XProvisioning\Contracts\CommercialRecipientDesignationAuthorityFac
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationAuthorityData;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementAccountBinding;
 use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 use LBHurtado\XProvisioning\Enums\ProvisioningActivationMode;
 use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
@@ -130,6 +131,46 @@ it('requires explicit Account and principal bindings for automatic internal sett
 
     expect(CommercialRecipientDesignationData::fromArray($designation->toArray())->toArray())
         ->toBe($designation->toArray());
+});
+
+it('can bind internal settlement to the independently accepted candidate Account', function (): void {
+    $designation = new CommercialRecipientDesignationData(
+        counterpartyReference: 'counterparty:3neti',
+        commercialRole: 'service_aggregator',
+        componentScope: ['inputs.fields.otp'],
+        agreementReference: 'agreement:institution-3neti:v1',
+        settlementDesignationReference: 'designation:commissioning:3neti:v2',
+        taxProfileReference: null,
+        effectiveFrom: '2026-08-16T00:00:00+08:00',
+        settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
+        settlementAccountBinding: CommercialSettlementAccountBinding::AcceptedCandidateAccount,
+        supersedesDesignationReference: 'designation:commissioning:3neti:v1',
+    );
+
+    expect($designation->toArray())
+        ->toMatchArray([
+            'settlement_account_binding' => 'accepted_candidate_account',
+            'supersedes_designation_reference' => 'designation:commissioning:3neti:v1',
+            'settlement_account_reference' => null,
+        ])
+        ->not->toHaveKey('settlement_principal_reference')
+        ->and(CommercialRecipientDesignationData::fromArray($designation->toArray())->toArray())
+        ->toBe($designation->toArray());
+});
+
+it('rejects preselected Account evidence for candidate-bound settlement', function (): void {
+    expect(fn () => new CommercialRecipientDesignationData(
+        counterpartyReference: 'counterparty:3neti',
+        commercialRole: 'service_aggregator',
+        componentScope: ['inputs.fields.otp'],
+        agreementReference: 'agreement:institution-3neti:v1',
+        settlementDesignationReference: 'designation:commissioning:3neti:v2',
+        taxProfileReference: null,
+        effectiveFrom: '2026-08-16T00:00:00+08:00',
+        settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
+        settlementAccountReference: 'wallet:preselected',
+        settlementAccountBinding: CommercialSettlementAccountBinding::AcceptedCandidateAccount,
+    ))->toThrow(DomainException::class, 'cannot name an Account or principal before acceptance');
 });
 
 it('keeps ordinary provisioning profiles backward compatible', function (): void {

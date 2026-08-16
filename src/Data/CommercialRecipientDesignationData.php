@@ -6,6 +6,7 @@ namespace LBHurtado\XProvisioning\Data;
 
 use DateTimeImmutable;
 use DomainException;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementAccountBinding;
 use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 final readonly class CommercialRecipientDesignationData
@@ -23,6 +24,8 @@ final readonly class CommercialRecipientDesignationData
         public CommercialSettlementDisposition $settlementDisposition = CommercialSettlementDisposition::RetainPayable,
         public ?string $settlementAccountReference = null,
         public ?string $settlementPrincipalReference = null,
+        public CommercialSettlementAccountBinding $settlementAccountBinding = CommercialSettlementAccountBinding::ExactAccount,
+        public ?string $supersedesDesignationReference = null,
     ) {
         foreach ([
             'counterparty reference' => $this->counterpartyReference,
@@ -63,15 +66,34 @@ final readonly class CommercialRecipientDesignationData
             : null;
 
         if ($this->settlementDisposition === CommercialSettlementDisposition::InternalAccountCredit
+            && $this->settlementAccountBinding === CommercialSettlementAccountBinding::ExactAccount
             && (($settlementAccountReference === null || $settlementAccountReference === '')
                 || ($settlementPrincipalReference === null || $settlementPrincipalReference === ''))) {
             throw new DomainException('Commercial Recipient Designation internal Account credit requires Account and principal references.');
         }
 
-        if ($this->settlementDisposition === CommercialSettlementDisposition::RetainPayable
+        if ($this->settlementDisposition === CommercialSettlementDisposition::InternalAccountCredit
+            && $this->settlementAccountBinding === CommercialSettlementAccountBinding::AcceptedCandidateAccount
             && (($settlementAccountReference !== null && $settlementAccountReference !== '')
                 || ($settlementPrincipalReference !== null && $settlementPrincipalReference !== ''))) {
+            throw new DomainException('Candidate-bound internal Account credit cannot name an Account or principal before acceptance.');
+        }
+
+        if ($this->settlementDisposition === CommercialSettlementDisposition::RetainPayable
+            && ($this->settlementAccountBinding !== CommercialSettlementAccountBinding::ExactAccount
+                || ($settlementAccountReference !== null && $settlementAccountReference !== '')
+                || ($settlementPrincipalReference !== null && $settlementPrincipalReference !== ''))) {
             throw new DomainException('Commercial Recipient Designation retained payables cannot name a settlement Account or principal.');
+        }
+
+        if ($this->supersedesDesignationReference !== null
+            && trim($this->supersedesDesignationReference) === '') {
+            throw new DomainException('Commercial Recipient Designation predecessor reference cannot be empty.');
+        }
+
+        if ($this->supersedesDesignationReference !== null
+            && trim($this->supersedesDesignationReference) === trim($this->settlementDesignationReference)) {
+            throw new DomainException('Commercial Recipient Designation cannot supersede itself.');
         }
 
         $effectiveFrom = $this->timestamp($this->effectiveFrom, 'effective-from');
@@ -106,6 +128,14 @@ final readonly class CommercialRecipientDesignationData
             $payload['settlement_principal_reference'] = trim($this->settlementPrincipalReference);
         }
 
+        if ($this->settlementAccountBinding !== CommercialSettlementAccountBinding::ExactAccount) {
+            $payload['settlement_account_binding'] = $this->settlementAccountBinding->value;
+        }
+
+        if ($this->supersedesDesignationReference !== null) {
+            $payload['supersedes_designation_reference'] = trim($this->supersedesDesignationReference);
+        }
+
         return $payload;
     }
 
@@ -129,6 +159,12 @@ final readonly class CommercialRecipientDesignationData
                 : null,
             settlementPrincipalReference: isset($payload['settlement_principal_reference'])
                 ? (string) $payload['settlement_principal_reference']
+                : null,
+            settlementAccountBinding: CommercialSettlementAccountBinding::from(
+                (string) ($payload['settlement_account_binding'] ?? CommercialSettlementAccountBinding::ExactAccount->value),
+            ),
+            supersedesDesignationReference: isset($payload['supersedes_designation_reference'])
+                ? (string) $payload['supersedes_designation_reference']
                 : null,
         );
     }
