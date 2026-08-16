@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace LBHurtado\XProvisioning;
 
 use Illuminate\Support\ServiceProvider;
+use LBHurtado\XProvisioning\Contracts\CommercialRecipientDesignationAuthorityFactoryContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningEvidenceVerifierContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningRevokerContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningSnapshotValidatorContract;
+use LBHurtado\XProvisioning\Services\CommercialRecipientDesignationAuthorityFactory;
 use LBHurtado\XProvisioning\Services\ConfiguredProvisioningEvidenceVerifier;
 use LBHurtado\XProvisioning\Services\NullProvisioningActivator;
 use LBHurtado\XProvisioning\Services\NullProvisioningRevoker;
 use LBHurtado\XProvisioning\Services\PermissiveProvisioningActorGuard;
+use LBHurtado\XProvisioning\Services\TypedProvisioningSnapshotValidator;
 
 final class XProvisioningServiceProvider extends ServiceProvider
 {
@@ -23,6 +27,8 @@ final class XProvisioningServiceProvider extends ServiceProvider
         $this->app->singleton(ProvisioningEvidenceVerifierContract::class, ConfiguredProvisioningEvidenceVerifier::class);
         $this->app->singleton(ProvisioningActivatorContract::class, NullProvisioningActivator::class);
         $this->app->singleton(ProvisioningRevokerContract::class, NullProvisioningRevoker::class);
+        $this->app->singleton(ProvisioningSnapshotValidatorContract::class, TypedProvisioningSnapshotValidator::class);
+        $this->app->singleton(CommercialRecipientDesignationAuthorityFactoryContract::class, CommercialRecipientDesignationAuthorityFactory::class);
     }
 
     public function boot(): void

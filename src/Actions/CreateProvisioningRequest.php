@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActorGuardContract;
+use LBHurtado\XProvisioning\Contracts\ProvisioningSnapshotValidatorContract;
 use LBHurtado\XProvisioning\Enums\ProvisioningActivationMode;
 use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
 use LBHurtado\XProvisioning\Enums\ProvisioningRequestStatus;
@@ -20,6 +21,7 @@ final readonly class CreateProvisioningRequest
     public function __construct(
         private ProvisioningActorGuardContract $actors,
         private ProvisioningEventRecorder $events,
+        private ProvisioningSnapshotValidatorContract $snapshots,
     ) {}
 
     /**
@@ -51,6 +53,7 @@ final readonly class CreateProvisioningRequest
                 config("x-provisioning.profiles.{$profile->value}.required_evidence", []),
             ),
         ];
+        $this->snapshots->validate($profile, $snapshot);
 
         return DB::transaction(function () use (
             $profile,
