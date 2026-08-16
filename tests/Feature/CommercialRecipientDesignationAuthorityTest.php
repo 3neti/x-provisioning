@@ -12,6 +12,8 @@ use LBHurtado\XProvisioning\Actions\SubmitProvisioningRequest;
 use LBHurtado\XProvisioning\Contracts\CommercialRecipientDesignationAuthorityFactoryContract;
 use LBHurtado\XProvisioning\Contracts\ProvisioningActivatorContract;
 use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationAuthorityData;
+use LBHurtado\XProvisioning\Data\CommercialRecipientDesignationData;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 use LBHurtado\XProvisioning\Enums\ProvisioningActivationMode;
 use LBHurtado\XProvisioning\Enums\ProvisioningProfile;
 use LBHurtado\XProvisioning\Models\ProvisioningAcceptance;
@@ -90,11 +92,26 @@ it('produces an immutable typed authority envelope only after independent activa
         ])
         ->and($payload['designation']['agreement_reference'])->toBe('agreement:institution-3neti:v1')
         ->and($payload['designation']['tax_profile_reference'])->toBe('tax-profile:3neti:ph:v1')
+        ->and($payload['designation']['settlement_disposition'])->toBe('retain_payable')
+        ->and($payload['designation']['settlement_account_reference'])->toBeNull()
         ->and($payload['accepted_snapshot_hash'])->toBe($activated->revision->snapshot_hash)
         ->and($payload['acceptance_evidence_hash'])->toBe($activated->acceptance->evidence_hash)
         ->and($payload['activated_by']['reference'])->toBe((string) $activationChecker->getKey())
         ->and($encoded)->not->toContain('private_tax_document')
         ->and($encoded)->not->toContain('must-not-appear');
+});
+
+it('requires an explicit Account for automatic internal settlement', function (): void {
+    expect(fn () => new CommercialRecipientDesignationData(
+        counterpartyReference: 'counterparty:3neti',
+        commercialRole: 'service_aggregator',
+        componentScope: ['inputs.fields.otp'],
+        agreementReference: 'agreement:institution-3neti:v1',
+        settlementDesignationReference: 'settlement-designation:3neti:v1',
+        taxProfileReference: null,
+        effectiveFrom: '2026-08-16T00:00:00+08:00',
+        settlementDisposition: CommercialSettlementDisposition::InternalAccountCredit,
+    ))->toThrow(DomainException::class, 'requires a settlement Account reference');
 });
 
 it('keeps ordinary provisioning profiles backward compatible', function (): void {
@@ -123,6 +140,8 @@ function designationSnapshot(): array
         'agreement_reference' => 'agreement:institution-3neti:v1',
         'settlement_designation_reference' => 'settlement-designation:3neti:v1',
         'tax_profile_reference' => 'tax-profile:3neti:ph:v1',
+        'settlement_disposition' => 'retain_payable',
+        'settlement_account_reference' => null,
         'effective_from' => '2026-08-16T00:00:00+08:00',
         'effective_until' => null,
     ];

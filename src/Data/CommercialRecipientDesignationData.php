@@ -6,6 +6,7 @@ namespace LBHurtado\XProvisioning\Data;
 
 use DateTimeImmutable;
 use DomainException;
+use LBHurtado\XProvisioning\Enums\CommercialSettlementDisposition;
 
 final readonly class CommercialRecipientDesignationData
 {
@@ -19,6 +20,8 @@ final readonly class CommercialRecipientDesignationData
         public ?string $taxProfileReference,
         public string $effectiveFrom,
         public ?string $effectiveUntil = null,
+        public CommercialSettlementDisposition $settlementDisposition = CommercialSettlementDisposition::RetainPayable,
+        public ?string $settlementAccountReference = null,
     ) {
         foreach ([
             'counterparty reference' => $this->counterpartyReference,
@@ -51,6 +54,20 @@ final readonly class CommercialRecipientDesignationData
             throw new DomainException('Commercial Recipient Designation tax profile reference cannot be empty.');
         }
 
+        $settlementAccountReference = $this->settlementAccountReference !== null
+            ? trim($this->settlementAccountReference)
+            : null;
+
+        if ($this->settlementDisposition === CommercialSettlementDisposition::InternalAccountCredit
+            && ($settlementAccountReference === null || $settlementAccountReference === '')) {
+            throw new DomainException('Commercial Recipient Designation internal Account credit requires a settlement Account reference.');
+        }
+
+        if ($this->settlementDisposition === CommercialSettlementDisposition::RetainPayable
+            && $settlementAccountReference !== null && $settlementAccountReference !== '') {
+            throw new DomainException('Commercial Recipient Designation retained payables cannot name a settlement Account.');
+        }
+
         $effectiveFrom = $this->timestamp($this->effectiveFrom, 'effective-from');
         if ($this->effectiveUntil !== null
             && $this->timestamp($this->effectiveUntil, 'effective-until') <= $effectiveFrom) {
@@ -71,6 +88,10 @@ final readonly class CommercialRecipientDesignationData
             'agreement_reference' => trim($this->agreementReference),
             'settlement_designation_reference' => trim($this->settlementDesignationReference),
             'tax_profile_reference' => $this->taxProfileReference !== null ? trim($this->taxProfileReference) : null,
+            'settlement_disposition' => $this->settlementDisposition->value,
+            'settlement_account_reference' => $this->settlementAccountReference !== null
+                ? trim($this->settlementAccountReference)
+                : null,
             'effective_from' => $this->effectiveFrom,
             'effective_until' => $this->effectiveUntil,
         ];
@@ -88,6 +109,12 @@ final readonly class CommercialRecipientDesignationData
             taxProfileReference: isset($payload['tax_profile_reference']) ? (string) $payload['tax_profile_reference'] : null,
             effectiveFrom: (string) ($payload['effective_from'] ?? ''),
             effectiveUntil: isset($payload['effective_until']) ? (string) $payload['effective_until'] : null,
+            settlementDisposition: CommercialSettlementDisposition::from(
+                (string) ($payload['settlement_disposition'] ?? CommercialSettlementDisposition::RetainPayable->value),
+            ),
+            settlementAccountReference: isset($payload['settlement_account_reference'])
+                ? (string) $payload['settlement_account_reference']
+                : null,
         );
     }
 
