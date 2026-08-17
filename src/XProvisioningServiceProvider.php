@@ -23,10 +23,10 @@ final class XProvisioningServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/x-provisioning.php', 'x-provisioning');
-        $this->app->singleton(ProvisioningActorGuardContract::class, PermissiveProvisioningActorGuard::class);
-        $this->app->singleton(ProvisioningEvidenceVerifierContract::class, ConfiguredProvisioningEvidenceVerifier::class);
-        $this->app->singleton(ProvisioningActivatorContract::class, NullProvisioningActivator::class);
-        $this->app->singleton(ProvisioningRevokerContract::class, NullProvisioningRevoker::class);
+        $this->app->singletonIf(ProvisioningActorGuardContract::class, PermissiveProvisioningActorGuard::class);
+        $this->app->singletonIf(ProvisioningEvidenceVerifierContract::class, ConfiguredProvisioningEvidenceVerifier::class);
+        $this->app->singletonIf(ProvisioningActivatorContract::class, NullProvisioningActivator::class);
+        $this->app->singletonIf(ProvisioningRevokerContract::class, NullProvisioningRevoker::class);
         $this->app->singleton(ProvisioningSnapshotValidatorContract::class, TypedProvisioningSnapshotValidator::class);
         $this->app->singleton(CommercialRecipientDesignationAuthorityFactoryContract::class, CommercialRecipientDesignationAuthorityFactory::class);
     }
