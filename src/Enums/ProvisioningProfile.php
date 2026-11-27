@@ -12,6 +12,7 @@ enum ProvisioningProfile: string
     case CommercialChecker = 'commercial_checker';
     case TreasuryMaker = 'treasury_maker';
     case TreasuryChecker = 'treasury_checker';
+    case TreasuryBankAccountAdministrator = 'treasury_bank_account_administrator';
     case ApiPartnerAdministrator = 'api_partner_administrator';
     case ApiProductionMaker = 'api_production_maker';
     case ApiProductionChecker = 'api_production_checker';
