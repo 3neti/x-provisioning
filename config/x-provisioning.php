@@ -33,6 +33,10 @@ return [
             'activation_mode' => ProvisioningActivationMode::ActivateOnVerifiedClaim->value,
             'required_evidence' => ['name', 'email', 'mobile', 'otp', 'responsibility_attestation'],
         ],
+        ProvisioningProfile::TreasuryBankAccountAdministrator->value => [
+            'activation_mode' => ProvisioningActivationMode::ReviewRequired->value,
+            'required_evidence' => ['name', 'email', 'mobile', 'otp', 'responsibility_attestation'],
+        ],
         ProvisioningProfile::ApiPartnerAdministrator->value => [
             'activation_mode' => ProvisioningActivationMode::ActivateOnVerifiedClaim->value,
             'required_evidence' => ['name', 'email', 'mobile', 'otp', 'responsibility_attestation'],

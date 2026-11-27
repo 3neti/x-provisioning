@@ -104,6 +104,21 @@ it('fails closed when required claim evidence is absent', function (): void {
         ->and($credential->offer->acceptance()->exists())->toBeFalse();
 });
 
+it('requires review and a responsibility attestation for bank-account administration', function (): void {
+    $maker = User::query()->create(['name' => 'Maker']);
+
+    $request = app(CreateProvisioningRequest::class)->handle(
+        ProvisioningProfile::TreasuryBankAccountAdministrator,
+        ['role' => 'Treasury Bank Account Administrator'],
+        $maker,
+    );
+
+    expect($request->revisions()->sole()->activation_mode)
+        ->toBe(ProvisioningActivationMode::ReviewRequired)
+        ->and(config('x-provisioning.profiles.treasury_bank_account_administrator.required_evidence'))
+        ->toContain('responsibility_attestation');
+});
+
 it('records an independent activation checker for review-required authority', function (): void {
     $maker = User::query()->create(['name' => 'Maker']);
     $approvalChecker = User::query()->create(['name' => 'Approval Checker']);
